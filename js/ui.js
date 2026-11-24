@@ -231,7 +231,7 @@ const UI = (() => {
     ['#view-home','#view-table','#view-fixtures','#view-squad','#view-transfers','#view-tactics'].forEach(v => {
       $(v).classList.add('hidden');
     });
-    $('#' + state.view).classList.remove('hidden');
+    $(state.view).classList.remove('hidden');
     document.querySelectorAll('nav button[data-view]').forEach(b => {
       b.classList.toggle('active', '#' + b.dataset.view === state.view);
     });
@@ -244,7 +244,7 @@ const UI = (() => {
     renderAll();
   }
 
-  return { show, playDay, save, renderFixturesDay, state, load };
+  return { show, playDay, save, renderFixturesDay, state, load, startGame };
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -259,23 +259,50 @@ document.addEventListener('DOMContentLoaded', () => {
       location.reload();
     }
   });
-  if (!UI.state.game) {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) UI.state.game = JSON.parse(saved);
+  const btn = $('#play-day');
+  if (btn) btn.addEventListener('click', UI.playDay);
+
+  const savedRaw = localStorage.getItem(STORAGE_KEY);
+  let savedOk = false;
+  if (savedRaw) {
+    try { UI.state.game = JSON.parse(savedRaw); savedOk = true; }
+    catch (e) { localStorage.removeItem(STORAGE_KEY); }
   }
-  if (!UI.state.game) {
-    const names = DATA.TEAMS.map(t => t.name).join('\n');
-    const teamName = prompt('Willkommen beim Bundesliga Manager!\n\nWähle deinen Verein (genauer Name):\n\n' + names + '\n\nVerein:', 'Hannover 96');
-    const t = DATA.TEAMS.find(x => x.name === teamName);
-    UI.state.game = newGame(null, t ? t.short : DATA.TEAMS[16].short);
-    UI.state.game.market = generateTransferList(UI.state.game);
-    UI.save();
+  if (savedOk && UI.state.game) {
+    boot();
+    return;
   }
+  showTeamSelect();
+});
+
+function boot() {
   if (!UI.state.game.market || !UI.state.game.market.length) {
     UI.state.game.market = generateTransferList(UI.state.game);
   }
   UI.state.view = '#view-home';
   UI.show('#view-home');
-  const btn = $('#play-day');
-  if (btn) btn.addEventListener('click', UI.playDay);
-});
+}
+
+function startGame(short) {
+  const t = DATA.TEAMS.find(x => x.short === short) || DATA.TEAMS[16];
+  UI.state.game = newGame(null, t.short);
+  UI.state.game.market = generateTransferList(UI.state.game);
+  UI.save();
+  $('#team-select').classList.add('hidden');
+  boot();
+}
+
+function showTeamSelect() {
+  const list = $('#team-select-list');
+  list.innerHTML = '';
+  DATA.TEAMS.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.className = 'team-btn';
+    b.innerHTML = '<strong>' + t.name + '</strong><br>' +
+      'Stärke ' + t.strength + ' · ' + fmtMoney(t.budget) + ' Transferbudget';
+    b.addEventListener('click', () => startGame(t.short));
+    if (i === 5 || i === 11) list.appendChild(document.createElement('br'));
+    list.appendChild(b);
+  });
+  $('#team-select').classList.remove('hidden');
+}
