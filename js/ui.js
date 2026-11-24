@@ -5,7 +5,7 @@ const STORAGE_KEY = 'hattrick-manager-save-v1';
 const $ = sel => document.querySelector(sel);
 
 const UI = (() => {
-  const state = { game: null };
+  const state = { game: null, squadSort: { key: 'skill', dir: -1 }, match: null, matchTimer: null, matchSpeed: 1, subOut: null, subIn: null, halftimeDone: false };
 
   function fmt(m) { return fmtMoney(m); }
 
@@ -104,7 +104,19 @@ const UI = (() => {
     const tb = $('#squad-body');
     tb.innerHTML = '';
     const lineup = new Set([me.lineup.gk, ...(me.lineup.field || [])]);
-    me.squad.slice().sort((a, b) => b.skill - a.skill).forEach(p => {
+    const players = me.squad.slice();
+    const key = state.squadSort.key;
+    const dir = state.squadSort.dir;
+    players.sort((a, b) => {
+      let x = a[key], y = b[key];
+      if (key === 'name') { x = x.toLowerCase(); y = y.toLowerCase(); return dir * x.localeCompare(y, 'de'); }
+      return dir * (x - y);
+    });
+    document.querySelectorAll('#view-squad .sortable').forEach(th => {
+      th.classList.toggle('sorted-asc', th.dataset.key === key && dir === 1);
+      th.classList.toggle('sorted-desc', th.dataset.key === key && dir === -1);
+    });
+    players.forEach(p => {
       const btn = document.createElement('button');
       btn.textContent = lineup.has(p.id) ? 'Bank' : 'Aufstellen';
       btn.onclick = () => toggleLineup(p.id);
@@ -175,6 +187,7 @@ const UI = (() => {
 
   function playDay() {
     const g = state.game;
+    if (state.match && !state.match.over) { showMatchView(); return; }
     if (g.day >= g.fixtures.length) {
       const finalPos = computeStandings(g).findIndex(r => r.team.short === g.userTeam) + 1;
       if (confirm('Saison ' + g.season + ' ist beendet – Platz ' + finalPos + '!\n\nNeue Saison starten?')) {
@@ -188,27 +201,215 @@ const UI = (() => {
     if ((myTeam().lineup.field || []).length < 10 || !myTeam().lineup.gk) {
       if (!confirm('Aufstellung unvollständig (benötigt: 1 TW + 10 Feldspieler).\nTrotzdem spielen?')) return;
     }
-    const results = endOfDay(g);
+    startLiveMatch(g);
+  }
+
+  function startLiveMatch(g) {
+    const ctx = startUserMatch(g);
+    if (!ctx) {
+      endOfDay(g);
+      save();
+      renderAll();
+      return;
+    }
+    state.match = ctx;
+    state.subOut = null; state.subIn = null;
+    state.halftimeDone = false;
+    state.matchSpeed = 1;
+    if (state.matchTimer) clearInterval(state.matchTimer);
+    state.matchTimer = setInterval(matchTick, 420);
+    renderMatch();
+    showMatchView();
+  }
+
+  function showMatchView() {
+    ['#view-home','#view-table','#view-fixtures','#view-squad','#view-transfers','#view-tactics','#view-match'].forEach(v => {
+      $(v).classList.add('hidden');
+    });
+    $('#view-match').classList.remove('hidden');
+    document.querySelectorAll('nav button[data-view]').forEach(b => b.classList.remove('active'));
+    renderMatch();
+  }
+
+  function matchTick() {
+    const ctx = state.match;
+    if (!ctx || ctx.over) return;
+    if (ctx.needsSub) {
+      openSubPanel(ctx.needsSub);
+      renderMatch();
+      return;
+    }
+    if (ctx.minute === 45 && !state.halftimeDone) {
+      state.halftimeDone = true;
+      pushEvent({ min: 45, side: 'home', type: 'break', text: '— HALBZEIT —', id: null });
+      renderMatch();
+      return;
+    }
+    let steps = state.matchSpeed;
+    if (steps === 'skip') steps = 999;
+    for (let i = 0; i < steps; i++) {
+      if (ctx.over || ctx.needsSub) break;
+      const ev = matchMinute(ctx);
+      ev.forEach(e => pushEvent(e));
+    }
+    if (ctx.over) finishLiveMatch();
+    else renderMatch();
+  }
+
+  function pushEvent(e) {
+    const li = document.createElement('li');
+    li.textContent = e.min + '. ' + e.text;
+    li.className = e.type;
+    const list = $('#match-events');
+    list.insertBefore(li, list.firstChild);
+  }
+
+  function finishLiveMatch() {
+    const ctx = state.match;
+    if (!ctx) return;
+    if (state.matchTimer) { clearInterval(state.matchTimer); state.matchTimer = null; }
+    const g = state.game;
+    const userScore = ctx.meHome ? ctx.hg + ':' + ctx.ag : ctx.ag + ':' + ctx.hg;
+    const userWin = (ctx.meHome ? ctx.hg > ctx.ag : ctx.ag > ctx.hg);
+    const others = finishUserMatch(g, ctx);
+    state.match = null;
+    g.news.push((g.day) + '. Spieltag: ' + userScore + ' gegen ' + ctx.opp.team.name +
+      (userWin ? ' – Sieg!' : (userScore.split(':')[0] === userScore.split(':')[1]) ? ' – Remis.' : ' – Niederlage.'));
+    if (!g.market || g.market.length < 6) g.market = (g.market || []).concat(generateTransferList(g)).slice(0, 14);
+    save();
+    renderSummaryTicker(others);
+    state.view = '#view-home';
+    renderAll();
+  }
+
+  function renderSummaryTicker(others) {
+    const g = state.game;
     const day = g.fixtures[g.day - 1];
     const me = myTeam();
-    const myMatch = day.find(m => g.teams[m.home].short === me.short || g.teams[m.away].short === me.short);
     const ticker = $('#ticker');
     ticker.innerHTML = '';
     day.forEach(m => {
       const h = g.teams[m.home], a = g.teams[m.away];
-      const scoring = results.filter(r => r.team === h.short || r.team === a.short);
-      const li = document.createElement('li');
+      const scoring = others.filter(r => r.team === h.short || r.team === a.short);
       const mine = h.short === me.short || a.short === me.short;
+      const li = document.createElement('li');
       li.textContent = h.name + ' – ' + a.name + ' ' + m.hg + ':' + m.ag +
         (scoring.length ? '  (' + scoring.map(s => s.scorer + ' ' + s.minute + '.').join(', ') + ')' : '');
       if (mine) li.className = 'me';
       ticker.appendChild(li);
     });
-    const res = myMatch ? (g.teams[myMatch.home].short === me.short ? myMatch.hg + ':' + myMatch.ag : myMatch.ag + ':' + myMatch.hg) : '–';
-    g.news.push(g.day + '. Spieltag: ' + res + ' – ' + nextOpponentText());
-    if (!g.market || g.market.length < 6) g.market = (g.market || []).concat(generateTransferList(g)).slice(0, 14);
+  }
+
+  const SLOTS = [
+    ['IV', 30, 78], ['IV', 70, 78], ['LV', 12, 72], ['RV', 88, 72],
+    ['DM', 50, 62], ['ZM', 35, 52], ['ZM', 65, 52],
+    ['LM', 12, 44], ['RM', 88, 44], ['OM', 50, 32], ['ST', 38, 18], ['ST', 62, 18]
+  ];
+
+  function chip(side, p, x, y, isOpp) {
+    const el = document.createElement('div');
+    el.className = 'chip' + (isOpp ? ' opp' : '') +
+      (side && side.yellows.has(p.id) ? ' warn' : '') +
+      ((side && side.fieldIds.includes(p.id)) ? '' : ' out');
+    el.style.left = x + '%';
+    el.style.top = y + '%';
+    el.textContent = p.pos + ' ' + p.name.split(' ')[1] + ' (' + p.skill + ')';
+    if (!side.fieldIds.includes(p.id)) el.style.opacity = '0.35';
+    $('#pitch').appendChild(el);
+  }
+
+  function renderPitchSide(side, isOpp) {
+    const ctx = state.match;
+    const byId = id => side.team.squad.find(p => p.id === id);
+    const gk = byId(side.gkId);
+    const slots = SLOTS.slice();
+    const taken = [];
+    if (gk) {
+      const y = isOpp ? 5 : 95;
+      chip(side, gk, 50, y, isOpp);
+    }
+    const field = side.fieldIds.map(byId).filter(Boolean);
+    field.forEach(p => {
+      let idx = slots.findIndex((s, i) => !taken.includes(i) && s[0] === p.pos);
+      if (idx < 0) idx = slots.findIndex((s, i) => !taken.includes(i));
+      if (idx < 0) return;
+      taken.push(idx);
+      let x = slots[idx][1], y = slots[idx][2];
+      if (isOpp) { x = 100 - x; y = 100 - y; }
+      chip(side, p, x, y, isOpp);
+    });
+  }
+
+  function renderMatch() {
+    const ctx = state.match;
+    if (!ctx) return;
+    $('#match-home').textContent = ctx.home.team.name;
+    $('#match-away').textContent = ctx.away.team.name;
+    $('#match-score-num').textContent = ctx.hg + ':' + ctx.ag;
+    $('#match-minute').textContent = ctx.minute + '. Minute' +
+      (ctx.minute >= ctx.stoppage ? ' – ABPFIFF!' : ctx.minute >= 45 ? ' – 2. Halbzeit' : '');
+    const pitch = $('#pitch');
+    pitch.innerHTML = '';
+    renderPitchSide(ctx.user, false);
+    renderPitchSide(ctx.opp, true);
+    document.querySelectorAll('#match-controls button[data-t]').forEach(b => {
+      b.classList.toggle('active', b.dataset.t === ctx.user.tactics);
+    });
+  }
+
+  function openSubPanel(focusId) {
+    const ctx = state.match;
+    if (!ctx) return;
+    const side = ctx.user;
+    $('#sub-panel').classList.remove('hidden');
+    if (focusId) state.subOut = focusId;
+    renderSubPanel();
+  }
+
+  function renderSubPanel() {
+    const ctx = state.match;
+    const side = ctx.user;
+    $('#sub-selection').textContent =
+      'Noch ' + side.subsLeft + ' Auswechslung(en) übrig.' +
+      (ctx.needsSub ? ' ACHTUNG: Ein Spieler ist verletzt/angeschlagen!' : '');
+    const outList = $('#sub-out-list');
+    outList.innerHTML = '';
+    const byId = id => side.team.squad.find(p => p.id === id);
+    side.fieldIds.forEach(id => {
+      const p = byId(id);
+      const row = document.createElement('div');
+      row.className = 'sub-row' + (state.subOut === id ? ' sel' : '');
+      row.textContent = p.name + ' (' + p.pos + ', Fit. ' + Math.round(p.fitness) + ')';
+      row.onclick = () => { state.subOut = id; renderSubPanel(); };
+      outList.appendChild(row);
+    });
+    const inList = $('#sub-in-list');
+    inList.innerHTML = '';
+    side.benchIds.map(byId).filter(Boolean).forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'sub-row' + (state.subIn === p.id ? ' sel' : '');
+      row.textContent = p.name + ' (' + p.pos + ', Skill ' + p.skill + ')';
+      row.onclick = () => { state.subIn = p.id; renderSubPanel(); };
+      inList.appendChild(row);
+    });
+    const doBtn = $('#sub-do');
+    if (doBtn) doBtn.disabled = !(state.subOut && state.subIn && side.subsLeft > 0);
+  }
+
+  function performSub() {
+    const ctx = state.match;
+    if (!ctx || !state.subOut || !state.subIn) return;
+    const side = ctx.user;
+    if (side.subsLeft <= 0) { alert('Keine Auswechslungen mehr übrig!'); return; }
+    substitutePlayer(ctx, side, state.subOut, state.subIn);
+    const outP = side.team.squad.find(p => p.id === state.subOut);
+    pushEvent({ min: ctx.minute, side: 'user', type: 'sub',
+      text: 'Auswechslung: ' + (side.team.squad.find(p => p.id === state.subIn).name) + ' für ' + (outP ? outP.name : '?') });
+    if (ctx.needsSub === state.subOut) ctx.needsSub = null;
+    state.subOut = null; state.subIn = null;
+    $('#sub-panel').classList.add('hidden');
     save();
-    renderAll();
+    renderMatch();
   }
 
   function tactics() {
@@ -228,13 +429,14 @@ const UI = (() => {
     $('#team-name').textContent = me.name;
     $('#day-label').textContent = state.game.day + '. Spieltag (Saison ' + state.game.season + ')';
     $('#money-label').textContent = fmt(me.money);
-    ['#view-home','#view-table','#view-fixtures','#view-squad','#view-transfers','#view-tactics'].forEach(v => {
+    ['#view-home','#view-table','#view-fixtures','#view-squad','#view-transfers','#view-tactics','#view-match'].forEach(v => {
       $(v).classList.add('hidden');
     });
     $(state.view).classList.remove('hidden');
     document.querySelectorAll('nav button[data-view]').forEach(b => {
       b.classList.toggle('active', '#' + b.dataset.view === state.view);
     });
+    if (state.view === '#view-match') { showMatchView(); return; }
     ({ '#view-home': home, '#view-table': table, '#view-fixtures': fixturesView,
        '#view-squad': squadView, '#view-transfers': transfersView, '#view-tactics': tactics })[state.view]();
   }
@@ -244,7 +446,7 @@ const UI = (() => {
     renderAll();
   }
 
-  return { show, playDay, save, renderFixturesDay, state, load, startGame };
+  return { show, playDay, save, renderFixturesDay, state, load, startGame, performSub, finishLiveMatch };
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -261,6 +463,51 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   const btn = $('#play-day');
   if (btn) btn.addEventListener('click', UI.playDay);
+  document.querySelectorAll('#view-squad .sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const st = UI.state.squadSort;
+      if (st.key === th.dataset.key) st.dir *= -1;
+      else { st.key = th.dataset.key; st.dir = 1; }
+      UI.show('#view-squad');
+    });
+  });
+  document.querySelectorAll('#match-controls button[data-t]').forEach(b => {
+    b.addEventListener('click', () => {
+      const ctx = UI.state.match;
+      if (!ctx || ctx.over) return;
+      ctx.user.tactics = b.dataset.t;
+      ctx.user.team.tactics = b.dataset.t;
+      document.querySelectorAll('#match-controls button[data-t]').forEach(x => x.classList.toggle('active', x === b));
+    });
+  });
+  $('#sub-open') && $('#sub-open').addEventListener('click', () => {
+    const ctx = UI.state.match;
+    if (!ctx || ctx.over) return;
+    $('#sub-panel').classList.toggle('hidden');
+    UI.show('#view-match');
+  });
+  $('#sub-do') && $('#sub-do').addEventListener('click', UI.performSub);
+  $('#sub-close') && $('#sub-close').addEventListener('click', () => $('#sub-panel').classList.add('hidden'));
+  $('#match-speed') && $('#match-speed').addEventListener('click', () => {
+    if (UI.state.matchSpeed === 1) { UI.state.matchSpeed = 3; $('#match-speed').textContent = '↭ Noch schneller'; }
+    else { UI.state.matchSpeed = 1; $('#match-speed').textContent = '↯ Normaltempo'; }
+  });
+  $('#match-finish') && $('#match-finish').addEventListener('click', () => {
+    const ctx = UI.state.match;
+    if (!ctx || ctx.over) return;
+    let guard = 0;
+    while (!ctx.over && guard++ < 200 && !ctx.needsSub) {
+      matchMinute(ctx).forEach(e => {
+        const li = document.createElement('li');
+        li.textContent = e.min + '. ' + e.text;
+        li.className = e.type;
+        $('#match-events').insertBefore(li, $('#match-events').firstChild);
+      });
+      if (ctx.minute === 45) guard = guard;
+    }
+    if (ctx.over) UI.finishLiveMatch();
+    else UI.show('#view-match');
+  });
 
   const savedRaw = localStorage.getItem(STORAGE_KEY);
   let savedOk = false;

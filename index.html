@@ -67,8 +67,8 @@
     <p id="squad-money"></p>
     <p>Startelf: 1 TW + 10 Feldspieler. Button links neben dem Namen = rein/raus.</p>
     <table class="tbl">
-      <thead><tr><th>Name</th><th>Pos</th><th>Alter</th><th>Skill</th><th>Fitness</th>
-      <th>Form</th><th>Spiele</th><th>Tore</th><th>Wert</th><th></th></tr></thead>
+      <thead><tr><th class="sortable" data-key="name">Name</th><th class="sortable" data-key="pos">Pos</th><th class="sortable" data-key="age">Alter</th><th class="sortable" data-key="skill">Skill</th><th class="sortable" data-key="fitness">Fitness</th>
+      <th class="sortable" data-key="form">Form</th><th class="sortable" data-key="games">Spiele</th><th class="sortable" data-key="goals">Tore</th><th class="sortable" data-key="value">Wert</th><th></th></tr></thead>
       <tbody id="squad-body"></tbody>
     </table>
   </section>
@@ -80,6 +80,35 @@
       <thead><tr><th>Name</th><th>Pos</th><th>Alter</th><th>Skill</th><th>Marktwert</th><th></th></tr></thead>
       <tbody id="transfer-body"></tbody>
     </table>
+  </section>
+
+  <section id="view-match" class="hidden">
+    <div id="match-score">
+      <span id="match-home"></span>
+      <strong id="match-score-num">0:0</strong>
+      <span id="match-away"></span>
+    </div>
+    <div id="match-minute"></div>
+    <div id="pitch"></div>
+    <div id="match-controls">
+      <button data-t="defensive">Defensiv</button>
+      <button data-t="normal">Normal</button>
+      <button data-t="offensive">Offensiv</button>
+      <button id="sub-open">Auswechseln</button>
+      <button id="match-speed">⏩ Schneller</button>
+      <button id="match-finish">Sofort beenden</button>
+    </div>
+    <div id="sub-panel" class="hidden">
+      <h3>Auswechslung</h3>
+      <div id="sub-selection"></div>
+      <p><button id="sub-do">Wechsel durchführen</button> <button id="sub-close">Schließen</button></p>
+      <div class="grid">
+        <div><h4>Raus</h4><div id="sub-out-list"></div></div>
+        <div><h4>Rein (Bank)</h4><div id="sub-in-list"></div></div>
+      </div>
+    </div>
+    <h3>Ereignisse</h3>
+    <ul id="match-events" class="news"></ul>
   </section>
 
   <section id="view-tactics" class="hidden">

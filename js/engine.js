@@ -159,7 +159,7 @@ function scorer(team, rnd) {
   return pool[pool.length - 1].p;
 }
 
-function applyMatch(state, match, scoreFn, rnd, log) {
+function applyMatch(state, match, scoreFn, rnd, log, goalScorers) {
   const teams = state.teams;
   const home = teams[match.home], away = teams[match.away];
   const [hg, ag] = scoreFn;
@@ -176,14 +176,22 @@ function applyMatch(state, match, scoreFn, rnd, log) {
     team.squad.forEach(p => {
       if (ids.has(p.id)) {
         p.games++;
-        p.fitness = Math.max(40, p.fitness - (11 + Math.floor(rnd() * 8)) + (Math.floor(rnd() * 4) / 2));
+        p.fitness = Math.max(40, p.fitness - (6 + Math.floor(rnd() * 5)));
         p.form = Math.max(1, Math.min(10, p.form + (rnd() < 0.35 ? 1 : rnd() < 0.3 ? -1 : 0)));
       } else {
         p.fitness = Math.min(100, p.fitness + 8);
       }
     });
     for (let i = 0; i < gf; i++) {
-      const s = scorer(team, rnd);
+      let s;
+      if (goalScorers) {
+        const list = (home === team ? goalScorers.home : goalScorers.away) || [];
+        const id = list[i];
+        s = id != null ? team.squad.find(x => x.id === id) : null;
+        if (!s) s = scorer(team, rnd);
+      } else {
+        s = scorer(team, rnd);
+      }
       if (s) { s.goals++; log && log.push({ team: team.short, scorer: s.name, minute: 1 + Math.floor(rnd() * 90) }); }
     }
   }
@@ -214,12 +222,13 @@ function weeklyFinance(state) {
   });
 }
 
-function endOfDay(state) {
+function endOfDay(state, skipShort) {
   const rnd = rng((state.seed + state.day * 7919) >>> 0);
   const day = state.fixtures[state.day];
   const results = [];
   day.forEach(m => {
     const home = state.teams[m.home], away = state.teams[m.away];
+    if (skipShort && (home.short === skipShort || away.short === skipShort)) return;
     const hs = teamStrength(home), as = teamStrength(away);
     const log = [];
     const score = simulateGoals(hs, as, rnd);
@@ -227,18 +236,24 @@ function endOfDay(state) {
     log.forEach(l => results.push(l));
     home.money += attendanceIncome(home, true);
   });
+  postDay(state, rnd);
+  return results;
+}
+
+function postDay(state, rnd) {
   weeklyFinance(state);
   state.day++;
-  const user = state.teams.find(t => t.short === state.userTeam);
-  if (user) {
-    user.squad.forEach(p => {
-      if (p.fitness < 95) p.fitness = Math.min(100, p.fitness + 5);
-      if (rnd() < 0.08 && p.age < 30 && p.skill < 95) { p.skill++; p.value = playerValue(p); }
-      if (rnd() < 0.02 && p.age > 31 && p.skill > 40) { p.skill--; p.value = playerValue(p); }
+  state.teams.forEach(t => {
+    const isUser = t.short === state.userTeam;
+    t.squad.forEach(p => {
+      p.fitness = Math.min(100, p.fitness + (isUser ? 10 : 8));
+      if (isUser) {
+        if (rnd() < 0.08 && p.age < 30 && p.skill < 95) { p.skill++; p.value = playerValue(p); }
+        if (rnd() < 0.02 && p.age > 31 && p.skill > 40) { p.skill--; p.value = playerValue(p); }
+      }
     });
-  }
+  });
   computeStandings(state);
-  return results;
 }
 
 function transferOffer(state, playerId, buyingTeamShort) {
@@ -318,6 +333,165 @@ function newSeason(state) {
   state.news.unshift('=== Saison ' + state.season + ' beginnt! ===');
 }
 
+function startUserMatch(state) {
+  const day = state.fixtures[state.day];
+  if (!day) return null;
+  const meIdx = state.teams.findIndex(t => t.short === state.userTeam);
+  const m = day.find(mm => mm.home === meIdx || mm.away === meIdx);
+  if (!m) return null;
+  const ctx = {
+    state, m, meHome: m.home === meIdx,
+    minute: 0, hg: 0, ag: 0, over: false,
+    stoppage: 90 + Math.floor(rng((state.seed + state.day * 31) >>> 0)() * 5),
+    events: [], needsSub: null,
+    rnd: rng((state.seed ^ 0xBEEF) + state.day * 977 >>> 0),
+    goalScorers: { home: [], away: [] },
+    goals: { home: [], away: [] }
+  };
+  ctx.home = makeSideFor(state, state.teams[m.home]);
+  ctx.away = makeSideFor(state, state.teams[m.away]);
+  ctx.user = ctx.meHome ? ctx.home : ctx.away;
+  ctx.opp = ctx.meHome ? ctx.away : ctx.home;
+  return ctx;
+}
+
+function makeSideFor(state, team) {
+  const side = {
+    team, isUser: team.short === state.userTeam, tactics: team.tactics,
+    yellows: new Set(), reds: new Set(), injured: new Set(), subsLeft: 3
+  };
+  const gkP = team.squad.find(p => p.id === team.lineup.gk) || team.squad.find(p => p.pos === 'TW');
+  side.gkId = gkP ? gkP.id : null;
+  side.fieldIds = (team.lineup.field || []).filter(id => team.squad.some(p => p.id === id));
+  const used = new Set([side.gkId].concat(side.fieldIds));
+  side.benchIds = team.squad.filter(p => !used.has(p.id)).map(p => p.id);
+  return side;
+}
+
+function liveStrength(side) {
+  return teamStrength({
+    squad: side.team.squad,
+    lineup: { gk: side.gkId, field: side.fieldIds },
+    tactics: side.tactics
+  });
+}
+
+function sidePlayer(side, id) { return side.team.squad.find(p => p.id === id); }
+
+function pickScorer(side, rnd) {
+  const field = side.fieldIds.map(id => sidePlayer(side, id)).filter(Boolean);
+  if (!field.length) return null;
+  const pool = field.map(p => ({ p, w: p.pos === 'ST' ? 10 : p.pos === 'OM' ? 6 : (p.pos === 'RM' || p.pos === 'LM') ? 3 : 1 }));
+  let total = pool.reduce((s, x) => s + x.w, 0);
+  let r = rnd() * total;
+  for (const x of pool) { r -= x.w; if (r <= 0) return x.p; }
+  return pool[pool.length - 1].p;
+}
+
+function matchGoal(ctx, side, isHome, ev) {
+  const s = pickScorer(side, ctx.rnd);
+  if (isHome) { ctx.hg++; } else { ctx.ag++; }
+  const key = isHome ? 'home' : 'away';
+  ctx.goalScorers[key].push(s ? s.id : null);
+  ctx.goals[key].push({ id: s ? s.id : null, min: ctx.minute });
+  ev.push({ min: ctx.minute, side: key, type: 'goal', id: s && s.id,
+    text: 'TOR! ' + (s ? s.name : '?') + ' (' + side.team.short + ')' });
+}
+
+function aiSub(ctx, side, outId, ev) {
+  if (side.subsLeft <= 0 || !side.benchIds.length) return;
+  const outP = sidePlayer(side, outId);
+  const bench = side.benchIds.map(id => sidePlayer(side, id)).filter(Boolean);
+  if (!bench.length) return;
+  bench.sort((a, b) => {
+    const pa = a.pos === (outP && outP.pos) ? 1 : 0;
+    const pb = b.pos === (outP && outP.pos) ? 1 : 0;
+    return pb - pa || b.skill - a.skill;
+  });
+  const inP = bench[0];
+  substitutePlayer(ctx, side, outId, inP.id);
+  ev.push({ min: ctx.minute, side: side === ctx.home ? 'home' : 'away', type: 'sub',
+    id: inP.id, text: 'Auswechslung (' + side.team.short + '): ' + inP.name + ' für ' + (outP ? outP.name : '?') });
+}
+
+function substitutePlayer(ctx, side, outId, inId) {
+  side.fieldIds = side.fieldIds.filter(id => id !== outId);
+  side.fieldIds.push(inId);
+  side.benchIds = side.benchIds.filter(id => id !== inId);
+  side.subsLeft--;
+}
+
+function matchMinute(ctx) {
+  if (ctx.over) return [];
+  ctx.minute++;
+  const ev = [];
+  const rnd = ctx.rnd;
+  const hs = liveStrength(ctx.home), as = liveStrength(ctx.away);
+  const pGoal = (att, def, home) =>
+    Math.max(0.004, Math.min(0.11, 0.015 * (att / Math.max(1, def)) * (home ? 1.12 : 1)));
+  const ph = pGoal(hs.attack, as.defense, true);
+  const pa = pGoal(as.attack, hs.defense, false);
+  if (rnd() < ph) matchGoal(ctx, ctx.home, true, ev);
+  if (!ev.length && rnd() < pa) matchGoal(ctx, ctx.away, false, ev);
+  for (const side of [ctx.home, ctx.away]) {
+    const key = side === ctx.home ? 'home' : 'away';
+    if (rnd() < 0.006) {
+      const ids = side.fieldIds.slice();
+      if (ids.length) {
+        const pid = ids[Math.floor(rnd() * ids.length)];
+        const p = sidePlayer(side, pid);
+        if (side.yellows.has(pid)) {
+          side.yellows.delete(pid);
+          side.reds.add(pid);
+          side.fieldIds = side.fieldIds.filter(id => id !== pid);
+          if (p) p.form = Math.max(1, p.form - 1);
+          ev.push({ min: ctx.minute, side: key, type: 'red', id: pid,
+            text: 'ROT! ' + (p ? p.name : '?') + ' (' + side.team.short + ') ist vom Platz!' });
+        } else {
+          side.yellows.add(pid);
+          ev.push({ min: ctx.minute, side: key, type: 'yellow', id: pid,
+            text: 'Gelb: ' + (p ? p.name : '?') + ' (' + side.team.short + ')' });
+        }
+      }
+    }
+    if (rnd() < 0.0035) {
+      const ids = side.fieldIds.slice();
+      if (ids.length) {
+        const pid = ids[Math.floor(rnd() * ids.length)];
+        const p = sidePlayer(side, pid);
+        if (p) p.fitness = Math.max(15, p.fitness - 25);
+        side.injured.add(pid);
+        ev.push({ min: ctx.minute, side: key, type: 'injury', id: pid,
+          text: 'VERLETZT: ' + (p ? p.name : '?') + ' (' + side.team.short + ')' });
+        if (side.isUser) {
+          ctx.needsSub = pid;
+        } else {
+          aiSub(ctx, side, pid, ev);
+        }
+      }
+    }
+    for (const pid of side.fieldIds) {
+      const p = sidePlayer(side, pid);
+      if (p) p.fitness = Math.max(10, p.fitness - 0.15);
+    }
+    const gk = sidePlayer(side, side.gkId);
+    if (gk && ctx.minute % 15 === 0) gk.fitness = Math.max(10, gk.fitness - 0.5);
+  }
+  if (ctx.minute >= ctx.stoppage) ctx.over = true;
+  ctx.events.push(...ev);
+  return ev;
+}
+
+function finishUserMatch(state, ctx) {
+  const m = ctx.m;
+  ctx.home.team.lineup = { gk: ctx.home.gkId, field: ctx.home.fieldIds.slice() };
+  ctx.away.team.lineup = { gk: ctx.away.gkId, field: ctx.away.fieldIds.slice() };
+  applyMatch(state, m, [ctx.hg, ctx.ag], ctx.rnd, null, ctx.goalScorers);
+  if (ctx.meHome) ctx.home.team.money += attendanceIncome(ctx.home.team, true);
+  const others = endOfDay(state, state.userTeam);
+  return others;
+}
+
 function generateTransferList(state) {
   const rnd = rng((state.seed ^ 0x5eed) + state.day * 131);
   const list = [];
@@ -335,6 +509,7 @@ function generateTransferList(state) {
 }
 
 if (typeof module !== 'undefined') module.exports = {
-  rng, newGame, newSeason, endOfDay, computeStandings, teamStrength, transferOffer,
+  rng, newGame, newSeason, endOfDay, postDay, computeStandings, teamStrength, transferOffer,
+  startUserMatch, matchMinute, finishUserMatch, substitutePlayer, liveStrength,
   generateTransferList, playerValue, fmtMoney, roundRobin
 };

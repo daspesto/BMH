@@ -9,10 +9,16 @@ GitHub Pages hosten).
 
 - **Alle 18 Vereine** mit individuellen Kaderbudgets – du wählst deinen Club
 - **34 Spieltage** mit echtem Round-Robin-Spielplan (Hin- und Rückrunde)
-- **Aufstellung**: 1 Torwart + 10 Feldspieler, frei kombinierbar
+- **Aufstellung**: 1 Torwart + 10 Feldspieler, frei kombinierbar,
+  Kader nach allen Spalten sortierbar (Klick auf Spaltenköpfe)
 - **Taktik**: Defensive / Normal / Offensive (wirkt auf Chancenverteilung)
 - **Transfermarkt**: 14 Spieler pro Spieltag, freie Agenten kaufen;
   Ablöse steckt in deinem Budget
+- **Live-Spiel deines Matches** mit Spielfeld-Overlay (grün = dein Team, rot = Gegner):
+  Spielverlauf Minute für Minute, Tore mit Schützen, Gelb-/Rote Karten,
+  Verletzungen, Halbzeitpause – und du kannst **eingreifen**:
+  Taktik live ändern, bis zu 3 Auswechslungen, Tempo beschleunigen oder
+  das Spiel sofort abspielen lassen. Der Gegner wechselt automatisch.
 - **Live-Ticker** mit allen Ergebnissen und Torschützen des Spieltags
 - **Tabelle** mit CL-Plätzen (grün) und Abstiegszone (rot), dein Team
   wird hervorgehoben
