@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bundesliga Manager – Browser Edition</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <h1>BUNDESLIGA MANAGER</h1>
+  <div id="hud">
+    <span id="team-name"></span>
+    <span id="day-label"></span>
+    <span id="money-label"></span>
+    <button id="play-day" class="cta">▶ Spieltag spielen</button>
+    <button id="reset-game" title="Spielstand löschen">⟲ Neu</button>
+  </div>
+</header>
+
+<nav>
+  <button data-view="view-home" class="active">Büro</button>
+  <button data-view="view-table">Tabelle</button>
+  <button data-view="view-fixtures">Spielplan</button>
+  <button data-view="view-squad">Kader</button>
+  <button data-view="view-transfers">Transfers</button>
+  <button data-view="view-tactics">Taktik</button>
+</nav>
+
+<main>
+  <section id="view-home">
+    <h2>Vereinsbüro</h2>
+    <p>Nächstes Spiel: <strong id="next-opponent">–</strong></p>
+    <div class="grid">
+      <div>
+        <h3>News</h3>
+        <ul id="home-news" class="news"></ul>
+      </div>
+      <div>
+        <h3>Top-Kräfte</h3>
+        <table class="tbl"><tbody id="home-kader"></tbody></table>
+      </div>
+    </div>
+    <h3>Ergebnisse des letzten Spieltags</h3>
+    <ul id="ticker" class="news"></ul>
+  </section>
+
+  <section id="view-table" class="hidden">
+    <h2>Tabelle</h2>
+    <table class="tbl">
+      <thead><tr><th>#</th><th>Verein</th><th>Sp</th><th>Tore</th><th>GD</th><th>Pkt</th></tr></thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </section>
+
+  <section id="view-fixtures" class="hidden">
+    <h2>Spielplan</h2>
+    <p>Spieltag: <select id="fixtures-day"></select></p>
+    <table class="tbl">
+      <thead><tr><th>Tag</th><th>Heim</th><th>Ergebnis</th><th>Gast</th></tr></thead>
+      <tbody id="fixtures-body"></tbody>
+    </table>
+  </section>
+
+  <section id="view-squad" class="hidden">
+    <h2>Kader &amp; Aufstellung</h2>
+    <p id="squad-money"></p>
+    <p>Startelf: 1 TW + 10 Feldspieler. Button links neben dem Namen = rein/raus.</p>
+    <table class="tbl">
+      <thead><tr><th>Name</th><th>Pos</th><th>Alter</th><th>Skill</th><th>Fitness</th>
+      <th>Form</th><th>Spiele</th><th>Tore</th><th>Wert</th><th></th></tr></thead>
+      <tbody id="squad-body"></tbody>
+    </table>
+  </section>
+
+  <section id="view-transfers" class="hidden">
+    <h2>Transfermarkt</h2>
+    <p id="transfer-money"></p>
+    <table class="tbl">
+      <thead><tr><th>Name</th><th>Pos</th><th>Alter</th><th>Skill</th><th>Marktwert</th><th></th></tr></thead>
+      <tbody id="transfer-body"></tbody>
+    </table>
+  </section>
+
+  <section id="view-tactics" class="hidden">
+    <h2>Taktik</h2>
+    <div id="tactics" class="grid">
+      <button class="option" data-t="defensive">Defensive (6-3-1)</button>
+      <button class="option" data-t="normal"> Normal (4-4-2)</button>
+      <button class="option" data-t="offensive">Attacke (3-4-3)</button>
+    </div>
+    <p>Offensiv = mehr Tore, mehr Gegentore. Defensiv = umgekehrt.</p>
+  </section>
+</main>
+
+<footer>Spielstand wird automatisch im Browser (localStorage) gespeichert.</footer>
+<script src="js/data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
