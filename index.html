@@ -3,134 +3,185 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bundesliga Manager – Browser Edition</title>
+<title>Bundesliga Manager Hattrick – Remake</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div id="screen">
 <header>
-  <h1>BUNDESLIGA MANAGER</h1>
+  <h1>BUNDESLIGA MANAGER HATTRICK</h1>
   <div id="hud">
     <span id="team-name"></span>
+    <span id="league-label"></span>
     <span id="day-label"></span>
     <span id="money-label"></span>
-    <button id="play-day" class="cta">▶ Spieltag spielen</button>
-    <button id="reset-game" title="Spielstand löschen">⟲ Neu</button>
+    <button id="play-day" class="cta">▶ SPIELTAG</button>
+    <button id="reset-game" title="Spielstand löschen">⟲ NEU</button>
   </div>
 </header>
 
 <nav>
-  <button data-view="view-home" class="active">Büro</button>
-  <button data-view="view-table">Tabelle</button>
-  <button data-view="view-fixtures">Spielplan</button>
-  <button data-view="view-squad">Kader</button>
-  <button data-view="view-transfers">Transfers</button>
-  <button data-view="view-tactics">Taktik</button>
+  <button data-view="view-home" class="active">BÜRO</button>
+  <button data-view="view-table">TABELLE</button>
+  <button data-view="view-fixtures">SPIELPLAN</button>
+  <button data-view="view-squad">KADER</button>
+  <button data-view="view-transfers">TRANSFERS</button>
+  <button data-view="view-stadium">STADION</button>
+  <button data-view="view-sponsors">SPONSOREN</button>
+  <button data-view="view-training">TRAINING</button>
 </nav>
 
 <main>
   <section id="view-home">
-    <h2>Vereinsbüro</h2>
-    <p>Nächstes Spiel: <strong id="next-opponent">–</strong></p>
-    <div class="grid">
-      <div>
-        <h3>News</h3>
-        <ul id="home-news" class="news"></ul>
-      </div>
-      <div>
-        <h3>Top-Kräfte</h3>
-        <table class="tbl"><tbody id="home-kader"></tbody></table>
-      </div>
+    <div class="box">
+      <h2>VEREINSBÜRO</h2>
+      <p>Nächstes Spiel: <strong id="next-opponent">–</strong></p>
+      <p class="dim">Konto: <span id="home-money"></span> · Stadion: <span id="home-stadium"></span> ·
+      Sponsor: <span id="home-sponsor"></span></p>
     </div>
-    <h3>Ergebnisse des letzten Spieltags</h3>
-    <ul id="ticker" class="news"></ul>
+    <div class="box">
+      <h3>NEWS</h3>
+      <ul id="home-news" class="news"></ul>
+    </div>
+    <div class="box">
+      <h3>ERGEBNISSE (letzte Runde)</h3>
+      <ul id="ticker" class="news"></ul>
+    </div>
   </section>
 
   <section id="view-table" class="hidden">
-    <h2>Tabelle</h2>
-    <table class="tbl">
-      <thead><tr><th>#</th><th>Verein</th><th>Sp</th><th>Tore</th><th>GD</th><th>Pkt</th></tr></thead>
-      <tbody id="table-body"></tbody>
-    </table>
+    <div class="box">
+      <h2>TABELLE</h2>
+      <p>Liga: <button class="lgbtn" data-lg="0">1. Bundesliga</button>
+              <button class="lgbtn" data-lg="1">2. Bundesliga</button>
+              <button class="lgbtn" data-lg="2">3. Liga</button></p>
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Verein</th><th>Sp</th><th>Tore</th><th>GD</th><th>Pkt</th></tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
   </section>
 
   <section id="view-fixtures" class="hidden">
-    <h2>Spielplan</h2>
-    <p>Spieltag: <select id="fixtures-day"></select></p>
-    <table class="tbl">
-      <thead><tr><th>Tag</th><th>Heim</th><th>Ergebnis</th><th>Gast</th></tr></thead>
-      <tbody id="fixtures-body"></tbody>
-    </table>
+    <div class="box">
+      <h2>SPIELPLAN</h2>
+      <p>Liga: <button class="lgbtn" data-lg="0">1. Bundesliga</button>
+              <button class="lgbtn" data-lg="1">2. Bundesliga</button>
+              <button class="lgbtn" data-lg="2">3. Liga</button></p>
+      <p>Spieltag: <select id="fixtures-day"></select></p>
+      <table class="tbl">
+        <thead><tr><th>Tag</th><th>Heim</th><th>Ergebnis</th><th>Gast</th></tr></thead>
+        <tbody id="fixtures-body"></tbody>
+      </table>
+    </div>
   </section>
 
   <section id="view-squad" class="hidden">
-    <h2>Kader &amp; Aufstellung</h2>
-    <p id="squad-money"></p>
-    <p>Startelf: 1 TW + 10 Feldspieler. Button links neben dem Namen = rein/raus.</p>
-    <table class="tbl">
-      <thead><tr><th class="sortable" data-key="name">Name</th><th class="sortable" data-key="pos">Pos</th><th class="sortable" data-key="age">Alter</th><th class="sortable" data-key="skill">Skill</th><th class="sortable" data-key="fitness">Fitness</th>
-      <th class="sortable" data-key="form">Form</th><th class="sortable" data-key="games">Spiele</th><th class="sortable" data-key="goals">Tore</th><th class="sortable" data-key="value">Wert</th><th></th></tr></thead>
-      <tbody id="squad-body"></tbody>
-    </table>
+    <div class="box">
+      <h2>KADER &amp; AUFSTELLUNG</h2>
+      <p id="squad-money"></p>
+      <p class="dim">Startelf: 1 TW + 10 Feldspieler. Klick auf Spaltenkopf = Sortierung.
+      AUFSTELLEN/BANK = Einsatz, VERKAUF = Transfer, REHA = Fitness (100.000 €).</p>
+      <table class="tbl">
+        <thead><tr>
+          <th class="sortable" data-key="name">Name</th><th class="sortable" data-key="pos">Pos</th>
+          <th class="sortable" data-key="age">Alt</th><th class="sortable" data-key="skill">Sk</th>
+          <th class="sortable" data-key="fitness">Fit</th><th class="sortable" data-key="form">Form</th>
+          <th class="sortable" data-key="games">Sp</th><th class="sortable" data-key="goals">Tore</th>
+          <th class="sortable" data-key="value">Wert</th><th>Aktion</th>
+        </tr></thead>
+        <tbody id="squad-body"></tbody>
+      </table>
+    </div>
   </section>
 
   <section id="view-transfers" class="hidden">
-    <h2>Transfermarkt</h2>
-    <p id="transfer-money"></p>
-    <table class="tbl">
-      <thead><tr><th>Name</th><th>Pos</th><th>Alter</th><th>Skill</th><th>Marktwert</th><th></th></tr></thead>
-      <tbody id="transfer-body"></tbody>
-    </table>
+    <div class="box">
+      <h2>TRANSFERMARKT</h2>
+      <p id="transfer-money"></p>
+      <table class="tbl">
+        <thead><tr><th>Name</th><th>Pos</th><th>Alter</th><th>Skill</th><th>Marktwert</th><th>Aktion</th></tr></thead>
+        <tbody id="transfer-body"></tbody>
+      </table>
+      <p class="dim">Spieler verkaufen: im KADER auf VERKAUF klicken.</p>
+    </div>
+  </section>
+
+  <section id="view-stadium" class="hidden">
+    <div class="box">
+      <h2>STADION</h2>
+      <p id="stadium-info"></p>
+      <p>Ausbau (400 €/Platz):</p>
+      <p>
+        <button data-expand="5000">+5.000 PLÄTZE</button>
+        <button data-expand="10000">+10.000 PLÄTZE</button>
+        <button data-expand="20000">+20.000 PLÄTZE</button>
+        <button id="roof-btn">DACH BAUEN (150 €/Platz, +12% Einnahmen)</button>
+      </p>
+    </div>
+  </section>
+
+  <section id="view-sponsors" class="hidden">
+    <div class="box">
+      <h2>SPONSOREN</h2>
+      <p id="sponsor-current"></p>
+      <p><button id="sponsor-negotiate">NEUES ANGEBOT EINHOLEN</button></p>
+      <p id="sponsor-offer"></p>
+    </div>
+  </section>
+
+  <section id="view-training" class="hidden">
+    <div class="box">
+      <h2>TRAINING &amp; REHA</h2>
+      <p id="camp-info"></p>
+      <p><button id="camp-btn">TRAININGSLAGER (400.000 €, 1x PRO SAISON)</button></p>
+      <h3>REHA-KLINIK (100.000 €)</h3>
+      <table class="tbl">
+        <thead><tr><th>Name</th><th>Pos</th><th>Fitness</th><th>Aktion</th></tr></thead>
+        <tbody id="rehab-body"></tbody>
+      </table>
+    </div>
   </section>
 
   <section id="view-match" class="hidden">
-    <div id="match-score">
-      <span id="match-home"></span>
-      <strong id="match-score-num">0:0</strong>
-      <span id="match-away"></span>
-    </div>
-    <div id="match-minute"></div>
-    <div id="pitch"></div>
-    <div id="match-controls">
-      <button data-t="defensive">Defensiv</button>
-      <button data-t="normal">Normal</button>
-      <button data-t="offensive">Offensiv</button>
-      <button id="sub-open">Auswechseln</button>
-      <button id="match-speed">⏩ Schneller</button>
-      <button id="match-finish">Sofort beenden</button>
-    </div>
-    <div id="sub-panel" class="hidden">
-      <h3>Auswechslung</h3>
-      <div id="sub-selection"></div>
-      <p><button id="sub-do">Wechsel durchführen</button> <button id="sub-close">Schließen</button></p>
-      <div class="grid">
-        <div><h4>Raus</h4><div id="sub-out-list"></div></div>
-        <div><h4>Rein (Bank)</h4><div id="sub-in-list"></div></div>
+    <div class="box">
+      <h2 id="match-title"></h2>
+      <pre id="ascii-pitch"></pre>
+      <div id="match-controls">
+        <button data-t="defensive">DEFENSIV</button>
+        <button data-t="normal">NORMAL</button>
+        <button data-t="offensive">OFFENSIV</button>
+        <button id="sub-open">AUSWECHSELN</button>
+        <button id="match-speed">SCHNELLER</button>
+        <button id="match-finish">SOORT BEENDEN</button>
       </div>
+      <div id="sub-panel" class="hidden">
+        <h3>AUSWECHSLUNG</h3>
+        <div id="sub-selection"></div>
+        <p><button id="sub-do">WECHSEL DURCHFÜHREN</button> <button id="sub-close">SCHLIESSEN</button></p>
+        <div class="grid">
+          <div><h4>RAUS</h4><div id="sub-out-list"></div></div>
+          <div><h4>REIN (BANK)</h4><div id="sub-in-list"></div></div>
+        </div>
+      </div>
+      <h3>EREIGNISSE</h3>
+      <ul id="match-events" class="news"></ul>
     </div>
-    <h3>Ereignisse</h3>
-    <ul id="match-events" class="news"></ul>
-  </section>
-
-  <section id="view-tactics" class="hidden">
-    <h2>Taktik</h2>
-    <div id="tactics" class="grid">
-      <button class="option" data-t="defensive">Defensive (6-3-1)</button>
-      <button class="option" data-t="normal"> Normal (4-4-2)</button>
-      <button class="option" data-t="offensive">Attacke (3-4-3)</button>
-    </div>
-    <p>Offensiv = mehr Tore, mehr Gegentore. Defensiv = umgekehrt.</p>
   </section>
 </main>
 
-<footer>Spielstand wird automatisch im Browser (localStorage) gespeichert.</footer>
+<footer>Spielstand wird automatisch im Browser gespeichert. Remake inspiriert von Bundesliga Manager Hattrick (Software 2000, 1993).</footer>
+</div>
 
 <div id="team-select" class="overlay hidden">
   <div class="overlay-box">
-    <h2>Wähle deinen Verein</h2>
-    <p>Klicke auf einen Club, um die Karriere zu starten. Werde Meister!</p>
+    <h2>BUNDESLIGA MANAGER HATTRICK</h2>
+    <p>Wähle deinen Verein – starte unten durch und werde Meister!</p>
+    <p id="ts-tabs"></p>
     <div id="team-select-list"></div>
   </div>
 </div>
+
 <script src="js/data.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/ui.js"></script>

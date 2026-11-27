@@ -1,65 +1,58 @@
-# Bundesliga Manager – Browser Edition
+# Bundesliga Manager Hattrick – Remake
 
-Ein Fußballmanager im Stil von *Bundesliga Manager Hattrick* (Software 2000,
-1993) – komplett im Browser spielbar. Kein Server, kein Build, keine
-Abhängigkeiten: einfach `index.html` im Browser öffnen (oder z. B. über
-GitHub Pages hosten).
+Ein Browser-Remake im Geist von *Bundesliga Manager Hattrick* (Software 2000,
+1993): DOS-Retro-Look, drei Ligen, Stadionbau, Sponsoren, Transfermarkt und
+Live-Spiele mit Eingriffsmöglichkeiten. Kein Server, kein Build: einfach
+`index.html` im Browser öffnen (oder via GitHub Pages hosten).
 
 ## Features
 
-- **Alle 18 Vereine** mit individuellen Kaderbudgets – du wählst deinen Club
-- **34 Spieltage** mit echtem Round-Robin-Spielplan (Hin- und Rückrunde)
-- **Aufstellung**: 1 Torwart + 10 Feldspieler, frei kombinierbar,
-  Kader nach allen Spalten sortierbar (Klick auf Spaltenköpfe)
-- **Taktik**: Defensive / Normal / Offensive (wirkt auf Chancenverteilung)
-- **Transfermarkt**: 14 Spieler pro Spieltag, freie Agenten kaufen;
-  Ablöse steckt in deinem Budget
-- **Live-Spiel deines Matches** mit Spielfeld-Overlay (grün = dein Team, rot = Gegner):
-  Spielverlauf Minute für Minute, Tore mit Schützen, Gelb-/Rote Karten,
-  Verletzungen, Halbzeitpause – und du kannst **eingreifen**:
-  Taktik live ändern, bis zu 3 Auswechslungen, Tempo beschleunigen oder
-  das Spiel sofort abspielen lassen. Der Gegner wechselt automatisch.
-- **Live-Ticker** mit allen Ergebnissen und Torschützen des Spieltags
-- **Tabelle** mit CL-Plätzen (grün) und Abstiegszone (rot), dein Team
-  wird hervorgehoben
-- **Spielerentwicklung**: Form, Fitness, Skill (Training), Alterung,
-  Karriereende ab ~35
-- **Finanzen**: Stadioneinnahmen, Wochenbudget, Spielergehälter
-- **Saisonübergang**: Sommerpause mit Alterung, Neuzugängen (Jugendspieler),
-  neuem Spielplan, Platzierung wird gemeldet
-- **Autosave** im Browser (localStorage) – Spielstand überlebt Reload
+### Ligen & Saison
+- **3 Ligen**: 1. Bundesliga, 2. Bundesliga, 3. Liga – je 18 Vereine
+- 34 Spieltage pro Liga (echter Round-Robin-Spielplan, Hin-/Rückrunde)
+- **Auf- & Abstieg** (je 2 Plätze) am Saisonende mit Meldung
+- Saisonübergang: Spieler altern, Karriereende, Jugendspieler rücken nach
+- Spielstand wird automatisch gespeichert (localStorage)
+
+### Spielbetrieb
+- **Aufstellung**: 1 TW + 10 Feldspieler; Kader nach allen Spalten sortierbar
+- **Taktik**: defensiv / normal / offensiv (auch LIVE im Match umschaltbar)
+- **Live-Match** deines Spiels im ASCII-Spielfeld: Spielstand, Minute,
+  Torschützen, Gelb-/Rote Karten, Verletzungen, Halbzeitpause
+- **Eingreifen jederzeit**: Taktik wechseln, bis zu 3 Auswechslungen,
+  Tempo beschleunigen oder Match sofort ausspielen; Gegner-KI wechselt selbst
+- Form, Fitness, Skill-Entwicklung (Trainingseffekt), Alterung
+- KI-Vereine rotieren ihre Aufstellung nach Fitness
+
+### Wirtschaft
+- **Stadionbau**: Kapazität ausbauen (+5k/+10k/+20k, 400 €/Platz),
+  Dach bauen (+12% Einnahmen), Ticketeinnahmen je Liga, Wartungskosten
+- **Sponsoren**: Vertrag, neue Angebote einholen und verhandeln
+- **Transfermarkt**: freie Spieler kaufen (17 Angebote pro Spieltag)
+- **Spielerverkauf** aus dem Kader an interessierte Vereine
+- **Trainingslager** (1x pro Saison, Fitness +25/Form +1) und
+  **Reha-Klinik** (Einzelspieler topfit, 100.000 €)
+- Gehälter, Stadion-Unterhalt, Sponsorengelder pro Spieltag
 
 ## Spielanleitung
+1. Beim ersten Start Liga und Verein per Klick wählen.
+2. **Kader**: Startelf prüfen (Klick auf Spalten sortiert).
+3. **Transfers/Stadion/Sponsoren/Training** nach Bedarf.
+4. **▶ SPIELTAG**: dein Match läuft live – Taktik/Wechsel jederzeit möglich.
+5. Nach 34 Spieltagen: Saisonende mit Auf-/Abstieg, dann geht's weiter.
 
-1. Beim ersten Start Verein auswählen (z. B. *Hannover 96*).
-2. Ansicht **Kader**: gewünschte Spieler per Button in die Startelf nehmen
-   (1 TW + 10 Feldspieler = 11).
-3. Ansicht **Transfermarkt**: Budget prüfen und Spieler kaufen.
-4. Ansicht **Taktik**: Spielweise wählen.
-5. Solange **▶ Spieltag spielen** drücken und in der **Tabelle** den
-   Fortschritt verfolgen.
-
-Neues Spiel: oben rechts **⟲ Neu** klicken (löscht den Spielstand).
+Neues Spiel: oben rechts **⟲ NEU** (löscht den Spielstand).
 
 ## Technik
-
 | Datei | Aufgabe |
 |---|---|
-| `index.html` | Struktur, Views (Büro, Tabelle, Spielplan, Kader, Transfers, Taktik) |
-| `css/style.css` | Retro-Look (Monospace, Bundesliga-Rot/Gold) |
-| `js/data.js` | Vereinsdaten, Namen, Positionen |
-| `js/engine.js` | Simulations-Kern: Spielplan (Round-Robin), Match-Engine, Finanzen, Training, Transfers, Saisons |
-| `js/ui.js` | Rendering, Navigation, Aktionen, localStorage-Speicherung |
+| `index.html` | Screens: Büro, Tabelle, Spielplan, Kader, Transfers, Stadion, Sponsoren, Training, Match |
+| `css/style.css` | VGA-Retro-Look (Blau/Gelb, Doppelrahmen, ASCII-Spielfeld) |
+| `js/data.js` | 3 Ligen à 18 Vereine, Namen, Positionen, Sponsoren |
+| `js/engine.js` | Simulation: Spielpläne, Match-Engine (KI + Live), Finanzen, Auf-/Abstieg |
+| `js/ui.js` | Views, Live-Match-Orchestrierung, localStorage |
 
-Primär für den Browser entwickelt; die Engine (`js/engine.js`) läuft
-entscheidungsfrei auch unter Node.js und wurde mit
-`node --check` sowie kompletten Saison-Simulations-Läufen getestet.
-
-## Hinweise
-
-- Vereinsnamen sind als reine Text-Labels enthalten (keine Logos, keine
-  Spielerrechte – alle Spieler sind zufällig generiert).
-- Keine echten Marken-Assets, keine Namensrechts-Verletzung beabsichtigt;
-  ein Themenableger lässt sich über `js/data.js` in eine Minute umbauen.
+Vereinsnamen sind reine Text-Labels (keine Logos/Assets), alle Spieler
+zufällig generiert – kein Marken-Asset, nur der Retro-Geist des Originals.
 
 Viel Erfolg auf der Trainerbank!
